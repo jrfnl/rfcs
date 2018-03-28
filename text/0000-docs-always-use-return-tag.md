@@ -5,7 +5,7 @@
 # Summary
 
 The current WordPress documentation standard explicitely forbids/discourages the use of `@return void`.
-This RFC proposes to always demand a `@return` tag in all function docblocks to demonstrate and document intent.
+This RFC proposes to always demand a `@return` tag in all function and method docblocks to demonstrate and document intent.
 
 # Basic example
 
@@ -50,13 +50,13 @@ function my_function() {
 
 ```php
 /**
- * Example function with mixed returns, including null/void.
+ * Example function with mixed returns, including null.
  *
- * @return int|void Description.
+ * @return int|null Description.
  */
 function my_function() {
 	if ( unfulfilled condition ) {
-		return;
+		return null;
 	}
 
 	// Do something.
@@ -86,6 +86,9 @@ By not documenting `@return void`, it becomes neigh impossible to distinguish be
 * The code and documentation are as should be, a void function, where the return value is insignificant.
 
 **By explicitely documenting `@return void`, the intent of the developer becomes clear and indisputable.**
+
+This is especially important when documenting abstract methods and methods in interfaces, as those methods do not have any code in the primary declaration, so the documentation is the only context available.
+
 
 ### Other considerations
 
@@ -136,13 +139,13 @@ function my_function(): void {
 
 A `@return` tag MUST list all possible return types.
 
-Valid types are: `bool`, `int`, `string`, `float`, `object`, `array`, `resource`, `callback`, `void` or a Fully Qualified Class name.
+Valid types are: `bool`, `int`, `string`, `float`, `object`, `array`, `resource`, `callback`, `null`, `void`, a Fully Qualified Class Name, or in the case of a class in the same namespace as the current file, a relative class name.
 
-The use of `null` as in `@return int|null` is DISCOURAGED in favour of `void`, as in `@return int|void`.
+The use of `null` as in `@return int|null` is only allowed when there is an explicit `return null;` statement in the code. An "empty" `return;` should be documented as `void`, as in `@return int|void`.
 
 The use of `mixed` as a return type is STRONGLY DISCOURAGED in favour of explicitely naming the possible return types.
 
-The use of `self` and `parent` as return types is FORBIDDEN. A Fully Qualified Class name should be used instead.
+The use of `self` and `parent` as return types is FORBIDDEN. A Fully Qualified or namespace relative class name should be used instead.
 
 
 ### Return Description
@@ -154,6 +157,7 @@ The description MAY be multi-line.
 The description MUST be in sentence form and end with a period `.`. Multiple sentences are allowed.
 
 If the function does not return anything, no description is necessary.
+
 
 ### Formatting
 
@@ -169,8 +173,17 @@ The `@return` tag MUST come after any `@param` tags.
 The `@return` tag MAY come before or after any `@throws` tags.
 
 
+### Differences when compared to the current WordPress PHP documentation standard
+* In contrast to the current standard, this RFC states that a `@return` tag must always be present in each function/method docblock.
+* In contrast to formatting implied in the code examples in the current standard, this RFC states that a `@return` tag should be preceeded by a blank line to have a clear visual distinction between function input and function output documentation.
+
+There are no other differences.
+
+Everything else is in line with the current WordPress PHP documentation standard, though various rules which are implied through the examples, have been made explicit for the purpose of this RFC.
+
+
 ### Differences when compared to the above mentioned references
-* Using `return null` and documenting this as `@return null` is not explicitely forbidden in this proposal, while `return null` is [explicitely forbidden for void functions](https://wiki.php.net/rfc/void_return_type#why_isn_t_return_nullpermitted).
+* Using `return null` and documenting this as `@return null` is not forbidden in this proposal, while `return null` is [explicitely forbidden for void functions](https://wiki.php.net/rfc/void_return_type#why_isn_t_return_nullpermitted).
 * [PSR-5](https://github.com/phpDocumentor/fig-standards/blob/master/proposed/phpdoc.md#715-return) denotes the return description as "_OPTIONAL yet RECOMMENDED_", while the above proposal makes it "_STRONGLY RECOMMENDED_".
 * [PSR-5](https://github.com/phpDocumentor/fig-standards/blob/master/proposed/phpdoc.md#715-return) states that `@return void` "_MAY be omitted_", while the above proposal forbids to omit it.
 
@@ -199,7 +212,7 @@ The upstream sniff does not contain auto-fixers, while for transitioning the cur
 
 When this standard is accepted, all new function docblocks being introduced into WordPress Core should comply with the updated standard.
 
-Once the tooling is in place, a one-time fixer run can be executed to automatically add missing `@return void` tags and where necessary, to add a blank documentation line above the `@return` tag line.
+Once the tooling is in place, a one-time fixer run can be executed to automatically add missing `@return void` tags and where necessary, to add a blank docblock line above the `@return` tag line.
 
 ### Userland WordPress projects
 
@@ -212,6 +225,27 @@ For existing documentation contributors, the change is small enough to get used 
 
 For new documentation contributors, there will be one less exception to remember, so in practice, there will be less to teach, not more.
 
-The WordPress PHP Documentation Standards would need to be adjusted to reflect this change. This could be as simple as removing the "_Note: `@return void` should not be used outside of the default bundled themes._" phrase in the two paragraphs quoted above.
+The WordPress PHP Documentation Standards would need to be adjusted to reflect this change.
 
-Possibly a "_@return should be present in all function docblocks_" phrase should be added to clarify the change for people who are looking for the old rule.
+The following changes would need to be made:
+* Removal of the "_Note: `@return void` should not be used outside of the default bundled themes._" phrase in the two paragraphs quoted above.
+* Addition of a "_A `@return` tag must be present in all function docblocks_" phrase to clarify the change for people who are looking for the old rule.
+* All examples docblocks in the standard should be adjusted to include the blank line above the `@return` tag.
+
+Additionally, it is recommended to reword the section regarding "_[Parameters that are arrays](https://make.wordpress.org/core/handbook/best-practices/inline-documentation-standards/php/#1-1-parameters-that-are-arrays)_" to include array `@return` tags.
+
+
+# Unresolved questions
+
+> Note that @return is not used for hook documentation, because action hooks return nothing, and filter hooks always return their first parameter.
+
+Ref: https://make.wordpress.org/core/handbook/best-practices/inline-documentation-standards/php/#4-hooks-actions-and-filters
+
+This RFC, at this time, does not include, nor apply to, hook docblocks.
+
+A case can be made, that the `@return` for hook function calls should also be explicitely documented.
+
+Documenting the `@return` of hooks could enhance the understanding of hooks for new developers in the WordPress eco-system and would make teaching the principle of hooks easier.
+
+In practical terms, for action hooks, this would always result in `@return void`. For filter hooks, this would repeat the type of the first parameter with a description along the lines of "Adjusted $var1.".
+
